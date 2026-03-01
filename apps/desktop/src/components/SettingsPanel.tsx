@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { LanguageSelector } from "./LanguageSelector";
 import { ModeToggle } from "./ModeToggle";
 import { HotkeyConfig } from "./HotkeyConfig";
-import type { AppSettings, SttProvider } from "../lib/constants";
+import { LANGUAGES, type AppSettings, type SttProvider } from "../lib/constants";
 import { setAutoStart } from "../lib/tauri-commands";
+
+const SELECTABLE_LANGUAGES = LANGUAGES.filter((l) => l.code !== "auto");
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -131,12 +132,55 @@ export function SettingsPanel({ settings, onUpdate, onClose }: SettingsPanelProp
           />
         </Section>
 
-        {/* Language */}
-        <Section title="Language">
-          <LanguageSelector
-            value={settings.language}
-            onChange={(language) => onUpdate({ language })}
-          />
+        {/* Languages */}
+        <Section title="Languages">
+          <p className="text-xs text-text-muted mb-2">
+            Select all languages you speak. Voz auto-detects which one you're using.
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {SELECTABLE_LANGUAGES.map((lang) => {
+              const selected = settings.personalLanguages.includes(lang.code);
+              return (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    const langs = new Set(settings.personalLanguages);
+                    if (selected) {
+                      if (langs.size > 1) langs.delete(lang.code);
+                    } else {
+                      langs.add(lang.code);
+                    }
+                    const arr = [...langs];
+                    onUpdate({
+                      personalLanguages: arr,
+                      language: arr[0] as AppSettings["language"],
+                    });
+                  }}
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm border transition-all ${
+                    selected
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-glass-border bg-bg-secondary text-text-secondary hover:border-text-muted"
+                  }`}
+                >
+                  <span>{lang.flag}</span>
+                  <span className="truncate text-xs">{lang.label}</span>
+                  {selected && (
+                    <motion.svg
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-3 h-3 ml-auto flex-shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </motion.svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </Section>
 
         {/* Mode */}
@@ -228,7 +272,7 @@ export function SettingsPanel({ settings, onUpdate, onClose }: SettingsPanelProp
         <Section title="System">
           <div className="rounded-lg border border-glass-border bg-bg-secondary p-3">
             <Toggle
-              label="Start at login"
+              label="Open at Mac startup"
               value={settings.autoStart}
               onChange={(v) => {
                 onUpdate({ autoStart: v });

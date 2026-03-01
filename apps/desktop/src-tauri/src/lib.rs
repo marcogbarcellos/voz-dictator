@@ -368,8 +368,8 @@ fn update_tray(state: &AppState, recording_state: &str) {
                 if let Err(e) = tray.set_icon(Some(icon)) {
                     log::error!("[tray] set_icon failed: {}", e);
                 }
-                // Ensure macOS renders colored icons, not template (monochrome)
-                let _ = tray.set_icon_as_template(false);
+                // Idle = template (macOS auto-tints for light/dark); recording/processing = colored
+                let _ = tray.set_icon_as_template(recording_state != "listening" && recording_state != "processing");
                 if let Err(e) = tray.set_title(Some(title)) {
                     log::error!("[tray] set_title failed: {}", e);
                 }
@@ -445,6 +445,24 @@ pub fn run() {
             usage,
         })
         .setup(move |app| {
+            // Set dock icon (tauri dev doesn't use the .app bundle icon)
+            #[cfg(target_os = "macos")]
+            {
+                use cocoa::base::{id, nil};
+                use objc::{class, msg_send, sel, sel_impl};
+                unsafe {
+                    let icon_data = include_bytes!("../icons/128x128@2x.png");
+                    let ns_data: id = msg_send![class!(NSData),
+                        dataWithBytes:icon_data.as_ptr()
+                        length:icon_data.len()
+                    ];
+                    let ns_image: id = msg_send![class!(NSImage), alloc];
+                    let ns_image: id = msg_send![ns_image, initWithData:ns_data];
+                    let ns_app: id = msg_send![class!(NSApplication), sharedApplication];
+                    let _: () = msg_send![ns_app, setApplicationIconImage:ns_image];
+                }
+            }
+
             // Set up tray — store handle
             let tray_icon = tray::setup_tray(app)?;
             if let Ok(mut guard) = tray_for_setup.lock() {

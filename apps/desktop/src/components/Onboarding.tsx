@@ -378,10 +378,10 @@ export function Onboarding({ onComplete, onUpdate }: OnboardingProps) {
               <label className="flex items-center justify-between px-4 py-3 rounded-lg bg-bg-secondary border border-glass-border cursor-pointer group">
                 <div className="text-left">
                   <span className="text-sm text-text-primary group-hover:text-accent transition-colors">
-                    Start Voz at login
+                    Open at Mac startup
                   </span>
                   <p className="text-[11px] text-text-muted mt-0.5">
-                    Launch automatically when you log in
+                    Voz will launch automatically when your Mac starts
                   </p>
                 </div>
                 <button

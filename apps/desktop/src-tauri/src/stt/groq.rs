@@ -2,7 +2,7 @@ use reqwest::multipart;
 use serde::Deserialize;
 
 const GROQ_API_URL: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
-const MODEL: &str = "whisper-large-v3";
+const MODEL: &str = "whisper-large-v3-turbo";
 
 #[derive(Deserialize)]
 struct TranscriptionResponse {

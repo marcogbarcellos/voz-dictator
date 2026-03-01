@@ -17,7 +17,7 @@ pub fn setup_tray(
             tauri::image::Image::from_bytes(include_bytes!("../icons/tray-idle.png"))
                 .expect("failed to load tray icon"),
         )
-        .icon_as_template(false)
+        .icon_as_template(true)
         .tooltip("Voz — Voice Dictation")
         .menu(&menu)
         .on_menu_event(move |app, event| match event.id.as_ref() {

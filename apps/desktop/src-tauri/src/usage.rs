@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Per-minute pricing constants
-const GROQ_WHISPER_PER_MIN: f64 = 0.111 / 60.0; // $0.111/hour
+const GROQ_WHISPER_PER_MIN: f64 = 0.04 / 60.0; // $0.04/hour (Whisper Large V3 Turbo)
 const DEEPGRAM_NOVA3_PER_MIN: f64 = 0.0077; // $0.0077/minute (Nova-3 mono PAYG)
 const ASSEMBLYAI_PER_MIN: f64 = 0.15 / 60.0; // $0.15/hour (Universal-2)
 const CLAUDE_HAIKU_INPUT_PER_MTOK: f64 = 1.00; // $1.00/MTok
