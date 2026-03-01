@@ -21,6 +21,8 @@ function fromRust(rust: Record<string, unknown>): Partial<AppSettings> {
     anthropicApiKey: (rust.anthropic_api_key as string) ?? undefined,
     hotkey: (rust.hotkey as string) ?? undefined,
     localModelPath: (rust.local_model_path as string) ?? undefined,
+    autoStart: rust.auto_start as boolean | undefined,
+    personalLanguages: (rust.personal_languages as string[]) ?? undefined,
   };
 }
 
@@ -41,6 +43,8 @@ function toRust(updates: Partial<AppSettings>): Record<string, unknown> {
   if (updates.anthropicApiKey !== undefined) out.anthropic_api_key = updates.anthropicApiKey;
   if (updates.hotkey !== undefined) out.hotkey = updates.hotkey;
   if (updates.localModelPath !== undefined) out.local_model_path = updates.localModelPath;
+  if (updates.autoStart !== undefined) out.auto_start = updates.autoStart;
+  if (updates.personalLanguages !== undefined) out.personal_languages = updates.personalLanguages;
   return out;
 }
 

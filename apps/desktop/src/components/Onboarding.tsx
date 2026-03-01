@@ -4,6 +4,7 @@ import { LANGUAGES, type AppSettings } from "../lib/constants";
 import {
   checkPermissions,
   requestMicrophonePermission,
+  setAutoStart,
 } from "../lib/tauri-commands";
 
 interface OnboardingProps {
@@ -34,6 +35,7 @@ export function Onboarding({ onComplete, onUpdate }: OnboardingProps) {
   const [checkingPermissions, setCheckingPermissions] = useState(false);
   const [groqKey, setGroqKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
+  const [autoStartEnabled, setAutoStartEnabled] = useState(true);
   const idx = STEPS.indexOf(step);
 
   const toggleLang = (code: string) => {
@@ -98,8 +100,12 @@ export function Onboarding({ onComplete, onUpdate }: OnboardingProps) {
   const next = () => {
     // Save language when leaving the language step
     if (step === "language") {
-      const primary = selectedLangs.has("pt") ? "pt" : [...selectedLangs][0] || "auto";
-      onUpdate({ language: primary as AppSettings["language"] });
+      const langs = [...selectedLangs];
+      const primary = selectedLangs.has("pt") ? "pt" : langs[0] || "auto";
+      onUpdate({
+        language: primary as AppSettings["language"],
+        personalLanguages: langs,
+      });
     }
     // Save API keys when leaving the apikeys step
     if (step === "apikeys") {
@@ -367,7 +373,46 @@ export function Onboarding({ onComplete, onUpdate }: OnboardingProps) {
                 </kbd>{" "}
                 anywhere to start dictating.
               </p>
-              <button onClick={onComplete} className="btn-primary">
+
+              {/* Auto-start toggle */}
+              <label className="flex items-center justify-between px-4 py-3 rounded-lg bg-bg-secondary border border-glass-border cursor-pointer group">
+                <div className="text-left">
+                  <span className="text-sm text-text-primary group-hover:text-accent transition-colors">
+                    Start Voz at login
+                  </span>
+                  <p className="text-[11px] text-text-muted mt-0.5">
+                    Launch automatically when you log in
+                  </p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={autoStartEnabled}
+                  onClick={() => setAutoStartEnabled((v) => !v)}
+                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${
+                    autoStartEnabled ? "bg-accent" : "bg-bg-elevated"
+                  }`}
+                >
+                  <motion.div
+                    animate={{ x: autoStartEnabled ? 16 : 2 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow"
+                  />
+                </button>
+              </label>
+
+              <button
+                onClick={async () => {
+                  if (autoStartEnabled) {
+                    try {
+                      await setAutoStart(true);
+                    } catch {
+                      // ignore — don't block onboarding
+                    }
+                  }
+                  onComplete();
+                }}
+                className="btn-primary"
+              >
                 Start Using Voz
               </button>
             </>

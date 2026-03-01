@@ -72,3 +72,22 @@ export async function updateSettings(
 ): Promise<void> {
   return invoke("update_settings", { updates });
 }
+
+export interface UsageSummary {
+  total_cost: number;
+  today_cost: number;
+  by_provider: { provider: string; cost: number; calls: number }[];
+  total_calls: number;
+}
+
+export async function getUsageSummary(): Promise<UsageSummary> {
+  return invoke("get_usage_summary");
+}
+
+export async function setAutoStart(enabled: boolean): Promise<void> {
+  return invoke("set_auto_start", { enabled });
+}
+
+export async function getAutoStart(): Promise<boolean> {
+  return invoke("get_auto_start");
+}

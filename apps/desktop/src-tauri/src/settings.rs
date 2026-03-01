@@ -18,6 +18,10 @@ pub struct VozSettings {
     pub personal_dictionary: Vec<String>,
     #[serde(default)]
     pub onboarding_complete: bool,
+    #[serde(default)]
+    pub auto_start: bool,
+    #[serde(default)]
+    pub personal_languages: Vec<String>,
 }
 
 impl Default for VozSettings {
@@ -38,6 +42,8 @@ impl Default for VozSettings {
             hotkey: "Alt+Space".to_string(),
             personal_dictionary: Vec::new(),
             onboarding_complete: false,
+            auto_start: false,
+            personal_languages: Vec::new(),
         }
     }
 }

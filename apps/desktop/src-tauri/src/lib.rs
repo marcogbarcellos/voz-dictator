@@ -5,11 +5,13 @@ mod injection;
 mod settings;
 mod stt;
 mod tray;
+mod usage;
 
 use audio::capture::AudioRecorder;
 use std::sync::Arc;
 use tauri::Manager;
 use tauri::tray::TrayIcon;
+use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::Mutex;
 
 pub struct AppState {
@@ -18,6 +20,7 @@ pub struct AppState {
     pub audio_level: Arc<std::sync::atomic::AtomicU32>,
     pub settings: Arc<Mutex<settings::VozSettings>>,
     pub tray: Arc<std::sync::Mutex<Option<TrayIcon>>>,
+    pub usage: Arc<Mutex<usage::UsageStore>>,
 }
 
 #[tauri::command]
@@ -42,32 +45,54 @@ async fn stop_recording(state: tauri::State<'_, AppState>) -> Result<String, Str
     update_tray(&state, "processing");
 
     let settings = state.settings.lock().await;
-    let language = settings.language.clone();
     let provider = settings.stt_provider.clone();
+
+    // If user configured multiple languages, use auto-detect for STT
+    // to avoid forcing the wrong language (e.g. Whisper biasing toward PT when user speaks EN)
+    let stt_language = if settings.personal_languages.len() > 1 {
+        log::info!("[stt] Multilingual user ({:?}), using auto-detect", settings.personal_languages);
+        "auto".to_string()
+    } else {
+        log::info!("[stt] Single language, using hint: {}", settings.language);
+        settings.language.clone()
+    };
+
+    // Estimate audio duration from WAV data: (len - 44 header) / (16000 Hz * 2 bytes per sample)
+    let audio_duration_secs = if audio_data.len() > 44 {
+        (audio_data.len() - 44) as f64 / (16000.0 * 2.0)
+    } else {
+        0.0
+    };
 
     // Transcribe based on provider
     let transcript = match provider.as_str() {
         "groq" => {
-            stt::groq::transcribe(&audio_data, &language, &settings.groq_api_key)
+            stt::groq::transcribe(&audio_data, &stt_language, &settings.groq_api_key)
                 .await
                 .map_err(|e| e.to_string())?
         }
         "deepgram" => {
-            stt::deepgram::transcribe(&audio_data, &language, &settings.deepgram_api_key)
+            stt::deepgram::transcribe(&audio_data, &stt_language, &settings.deepgram_api_key)
                 .await
                 .map_err(|e| e.to_string())?
         }
         "assemblyai" => {
-            stt::assemblyai::transcribe(&audio_data, &language, &settings.assemblyai_api_key)
+            stt::assemblyai::transcribe(&audio_data, &stt_language, &settings.assemblyai_api_key)
                 .await
                 .map_err(|e| e.to_string())?
         }
         _ => {
-            stt::groq::transcribe(&audio_data, &language, &settings.groq_api_key)
+            stt::groq::transcribe(&audio_data, &stt_language, &settings.groq_api_key)
                 .await
                 .map_err(|e| e.to_string())?
         }
     };
+
+    // Track STT usage
+    {
+        let mut usage = state.usage.lock().await;
+        usage.add_stt_usage(&provider, audio_duration_secs);
+    }
 
     // Reset tray to idle
     update_tray(&state, "idle");
@@ -118,10 +143,56 @@ async fn cleanup_text(
     app_context: String,
 ) -> Result<String, String> {
     let settings = state.settings.lock().await;
-    let result = cleanup::llm::cleanup(&text, &language, &app_context, &settings.anthropic_api_key)
+    let api_key = settings.anthropic_api_key.clone();
+
+    // Determine configured languages
+    let languages = if settings.personal_languages.is_empty() {
+        log::info!("[cleanup] personal_languages empty, using single language: {}", language);
+        vec![language]
+    } else {
+        log::info!("[cleanup] personal_languages: {:?}", settings.personal_languages);
+        settings.personal_languages.clone()
+    };
+    drop(settings); // Release lock before async calls
+
+    log::info!("[cleanup] input text ({} chars): {:?}", text.len(), &text[..text.len().min(100)]);
+
+    // Step 1: If multiple languages configured, detect language first
+    let detected_language = if languages.len() > 1 {
+        log::info!("[cleanup] Step 1: Detecting language among {:?}...", languages);
+        let detect = cleanup::llm::detect_language(&text, &languages, &api_key)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        log::info!("[cleanup] Detected language: '{}' ({} input, {} output tokens)", detect.language, detect.input_tokens, detect.output_tokens);
+
+        // Track detection usage
+        if detect.input_tokens > 0 || detect.output_tokens > 0 {
+            let mut usage = state.usage.lock().await;
+            usage.add_cleanup_usage(detect.input_tokens, detect.output_tokens);
+        }
+
+        detect.language
+    } else {
+        log::info!("[cleanup] Single language, skipping detection: {}", languages[0]);
+        languages[0].clone()
+    };
+
+    // Step 2: Cleanup with detected language
+    log::info!("[cleanup] Step 2: Cleaning up with language='{}'...", detected_language);
+    let result = cleanup::llm::cleanup(&text, &detected_language, &app_context, &api_key)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(result)
+
+    log::info!("[cleanup] Result ({} chars): {:?}", result.text.len(), &result.text[..result.text.len().min(100)]);
+
+    // Track cleanup usage
+    if result.input_tokens > 0 || result.output_tokens > 0 {
+        let mut usage = state.usage.lock().await;
+        usage.add_cleanup_usage(result.input_tokens, result.output_tokens);
+    }
+
+    Ok(result.text)
 }
 
 #[tauri::command]
@@ -217,6 +288,15 @@ async fn update_settings(
         if let Some(v) = obj.get("onboarding_complete").and_then(|v| v.as_bool()) {
             settings.onboarding_complete = v;
         }
+        if let Some(v) = obj.get("auto_start").and_then(|v| v.as_bool()) {
+            settings.auto_start = v;
+        }
+        if let Some(v) = obj.get("personal_languages").and_then(|v| v.as_array()) {
+            settings.personal_languages = v
+                .iter()
+                .filter_map(|item| item.as_str().map(|s| s.to_string()))
+                .collect();
+        }
     }
 
     settings.save().map_err(|e| e.to_string())?;
@@ -224,54 +304,89 @@ async fn update_settings(
     Ok(())
 }
 
+#[tauri::command]
+async fn get_usage_summary(
+    state: tauri::State<'_, AppState>,
+) -> Result<usage::UsageSummary, String> {
+    let usage = state.usage.lock().await;
+    Ok(usage.summary())
+}
+
+#[tauri::command]
+async fn set_auto_start(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let autostart = app.autolaunch();
+    if enabled {
+        autostart.enable().map_err(|e| e.to_string())?;
+    } else {
+        autostart.disable().map_err(|e| e.to_string())?;
+    }
+
+    // Persist to settings
+    let mut settings = state.settings.lock().await;
+    settings.auto_start = enabled;
+    settings.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_auto_start(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let autostart = app.autolaunch();
+    autostart.is_enabled().map_err(|e| e.to_string())
+}
+
 /// Update tray icon/title based on recording state (called from Rust, no IPC overhead)
 fn update_tray(state: &AppState, recording_state: &str) {
-    if let Ok(tray_guard) = state.tray.lock() {
-        if let Some(tray) = tray_guard.as_ref() {
-            let (title, tooltip) = match recording_state {
-                "listening" => ("REC", "Voz — Recording..."),
-                "processing" => ("...", "Voz — Transcribing..."),
-                _ => ("", "Voz — Voice Dictation"),
-            };
-            let icon = match recording_state {
-                "listening" => make_circle_icon(255, 59, 48),
-                "processing" => make_circle_icon(255, 179, 0),
-                _ => tauri::image::Image::from_bytes(
-                    include_bytes!("../icons/tray-idle.png"),
-                )
-                .expect("failed to load idle icon"),
-            };
-            let _ = tray.set_icon(Some(icon));
-            let _ = tray.set_title(Some(title));
-            let _ = tray.set_tooltip(Some(tooltip));
-        }
-    }
-}
-
-/// Generate a colored circle icon as raw RGBA (44x44 @2x for macOS menu bar)
-fn make_circle_icon(r: u8, g: u8, b: u8) -> tauri::image::Image<'static> {
-    const SIZE: u32 = 44;
-    const CENTER: f32 = SIZE as f32 / 2.0;
-    const RADIUS: f32 = 10.0;
-
-    let mut rgba = vec![0u8; (SIZE * SIZE * 4) as usize];
-    for y in 0..SIZE {
-        for x in 0..SIZE {
-            let dx = x as f32 + 0.5 - CENTER;
-            let dy = y as f32 + 0.5 - CENTER;
-            let dist = (dx * dx + dy * dy).sqrt();
-            let idx = ((y * SIZE + x) * 4) as usize;
-            if dist <= RADIUS {
-                rgba[idx] = r;
-                rgba[idx + 1] = g;
-                rgba[idx + 2] = b;
-                rgba[idx + 3] = 255;
+    log::info!("[tray] update_tray called with state='{}'", recording_state);
+    match state.tray.lock() {
+        Ok(tray_guard) => {
+            if let Some(tray) = tray_guard.as_ref() {
+                let (title, tooltip) = match recording_state {
+                    "listening" => ("REC", "Voz — Recording..."),
+                    "processing" => ("...", "Voz — Transcribing..."),
+                    _ => ("", "Voz — Voice Dictation"),
+                };
+                let icon = match recording_state {
+                    "listening" => tauri::image::Image::from_bytes(
+                        include_bytes!("../icons/tray-recording.png"),
+                    )
+                    .expect("failed to load recording icon"),
+                    "processing" => tauri::image::Image::from_bytes(
+                        include_bytes!("../icons/tray-processing.png"),
+                    )
+                    .expect("failed to load processing icon"),
+                    _ => tauri::image::Image::from_bytes(
+                        include_bytes!("../icons/tray-idle.png"),
+                    )
+                    .expect("failed to load idle icon"),
+                };
+                if let Err(e) = tray.set_icon(Some(icon)) {
+                    log::error!("[tray] set_icon failed: {}", e);
+                }
+                // Ensure macOS renders colored icons, not template (monochrome)
+                let _ = tray.set_icon_as_template(false);
+                if let Err(e) = tray.set_title(Some(title)) {
+                    log::error!("[tray] set_title failed: {}", e);
+                }
+                if let Err(e) = tray.set_tooltip(Some(tooltip)) {
+                    log::error!("[tray] set_tooltip failed: {}", e);
+                }
+                log::info!("[tray] Successfully updated tray to '{}'", recording_state);
+            } else {
+                log::warn!("[tray] Tray handle is None!");
             }
-            // else stays transparent (0,0,0,0)
+        }
+        Err(e) => {
+            log::error!("[tray] Failed to lock tray mutex: {}", e);
         }
     }
-    tauri::image::Image::new_owned(rgba, SIZE, SIZE)
 }
+
 
 #[tauri::command]
 async fn set_recording_state(
@@ -314,17 +429,20 @@ pub fn run() {
     let tray_handle: Arc<std::sync::Mutex<Option<TrayIcon>>> =
         Arc::new(std::sync::Mutex::new(None));
 
+    let usage = Arc::new(Mutex::new(usage::UsageStore::load()));
     let tray_for_setup = tray_handle.clone();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
         .manage(AppState {
             recorder,
             audio_level,
             settings,
             tray: tray_handle,
+            usage,
         })
         .setup(move |app| {
             // Set up tray — store handle
@@ -373,6 +491,9 @@ pub fn run() {
             update_settings,
             set_recording_state,
             smart_inject_text,
+            get_usage_summary,
+            set_auto_start,
+            get_auto_start,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

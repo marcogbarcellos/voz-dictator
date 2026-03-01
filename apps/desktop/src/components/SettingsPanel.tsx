@@ -3,6 +3,7 @@ import { LanguageSelector } from "./LanguageSelector";
 import { ModeToggle } from "./ModeToggle";
 import { HotkeyConfig } from "./HotkeyConfig";
 import type { AppSettings, SttProvider } from "../lib/constants";
+import { setAutoStart } from "../lib/tauri-commands";
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -219,6 +220,22 @@ export function SettingsPanel({ settings, onUpdate, onClose }: SettingsPanelProp
               label="Adapt tone"
               value={settings.adaptTone}
               onChange={(v) => onUpdate({ adaptTone: v })}
+            />
+          </div>
+        </Section>
+
+        {/* System */}
+        <Section title="System">
+          <div className="rounded-lg border border-glass-border bg-bg-secondary p-3">
+            <Toggle
+              label="Start at login"
+              value={settings.autoStart}
+              onChange={(v) => {
+                onUpdate({ autoStart: v });
+                setAutoStart(v).catch((err) =>
+                  console.error("Failed to toggle auto-start:", err)
+                );
+              }}
             />
           </div>
         </Section>

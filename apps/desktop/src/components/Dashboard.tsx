@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { RecordingState, AppSettings } from "../lib/constants";
 import { Waveform } from "./Waveform";
+import { UsageBar } from "./UsageBar";
 
 interface DashboardProps {
   recording: RecordingState;
@@ -319,6 +320,9 @@ export function Dashboard({ recording, settings, onOpenSettings }: DashboardProp
           )}
         </AnimatePresence>
       </div>
+
+      {/* Usage tracking */}
+      <UsageBar />
 
       {/* Bottom status bar */}
       <div className="flex-shrink-0 px-5 py-3 border-t border-glass-border">

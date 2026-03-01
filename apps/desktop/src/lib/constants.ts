@@ -32,6 +32,8 @@ export interface AppSettings {
   anthropicApiKey: string;
   localModelPath: string;
   personalDictionary: string[];
+  autoStart: boolean;
+  personalLanguages: string[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -50,6 +52,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   anthropicApiKey: "",
   localModelPath: "",
   personalDictionary: [],
+  autoStart: false,
+  personalLanguages: [],
 };
 
 export type RecordingStatus =

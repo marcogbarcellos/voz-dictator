@@ -26,6 +26,9 @@ pub fn build_system_prompt(language: &str, app_context: &str) -> String {
         "es" => {
             "Spanish fillers to remove: este, pues, o sea, bueno, digamos, verdad, eh"
         }
+        "fr" => "French fillers to remove: euh, ben, genre, en fait, du coup, quoi, voilà",
+        "de" => "German fillers to remove: äh, ähm, halt, also, sozusagen, quasi, na ja",
+        "it" => "Italian fillers to remove: ehm, cioè, tipo, allora, praticamente, insomma",
         _ => "Remove common speech fillers and hesitations in the detected language.",
     };
 
@@ -38,9 +41,9 @@ Rules:
 3. KEEP ALL CONTENT — output must contain every sentence and idea from the input. Do NOT summarize, shorten, or omit anything. The output should be roughly the same length as the input.
 4. Do NOT add any commentary, explanations, or formatting markers
 5. Preserve proper nouns, technical terms, and intentional word choices
-6. {tone_hint}
-7. {filler_examples}
-8. Language: {language}
+6. Do NOT translate — the text is in {language}, keep it in {language}
+7. {tone_hint}
+8. {filler_examples}
 
 Output ONLY the cleaned text. Nothing else — no quotes, no preamble, just the full cleaned text."#,
         tone_hint = tone_hint,
