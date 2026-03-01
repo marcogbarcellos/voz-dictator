@@ -1,0 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #1C1917;
+  --color-bg-secondary: #292524;
+  --color-bg-elevated: #44403C;
+  --color-bg-glass: rgba(41, 37, 36, 0.72);
+
+  --color-accent: #F59E0B;
+  --color-accent-hover: #D97706;
+  --color-accent-soft: rgba(245, 158, 11, 0.15);
+  --color-accent-glow: rgba(245, 158, 11, 0.3);
+
+  --color-text-primary: #FAFAF9;
+  --color-text-secondary: #A8A29E;
+  --color-text-muted: #78716C;
+
+  --color-success: #34D399;
+
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+
+  --font-display: "Instrument Serif", serif;
+  --font-body: "DM Sans", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}

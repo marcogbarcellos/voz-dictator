@@ -1,0 +1,40 @@
+[package]
+name = "voz"
+version = "0.1.0"
+description = "Brazilian-first voice dictation for Mac"
+authors = ["Voz"]
+edition = "2021"
+
+[lib]
+name = "voz_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-store = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+tokio = { version = "1", features = ["full"] }
+cpal = "0.15"
+hound = "3.5"
+rubato = "0.15"
+base64 = "0.22"
+dirs = "6"
+log = "0.4"
+env_logger = "0.11"
+anyhow = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.26"
+objc = "0.2"
+block = "0.1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

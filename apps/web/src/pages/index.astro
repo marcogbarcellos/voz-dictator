@@ -1,0 +1,365 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Voz — Voice Dictation for Mac">
+  <!-- Nav -->
+  <nav class="fixed top-0 w-full z-50 border-b border-glass-border" style="background: rgba(28, 25, 23, 0.85); backdrop-filter: blur(20px);">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="text-xl font-display text-text-primary tracking-tight">
+        <span class="text-accent">Voz</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm text-text-secondary">
+        <a href="#features" class="hover:text-text-primary transition-colors">Features</a>
+        <a href="#languages" class="hover:text-text-primary transition-colors">Languages</a>
+        <a href="#pricing" class="hover:text-text-primary transition-colors">Pricing</a>
+      </div>
+      <a
+        href="#pricing"
+        class="px-4 py-2 bg-accent text-bg-primary text-sm font-semibold rounded-lg hover:bg-accent-hover transition-colors"
+      >
+        Download
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] opacity-20 pointer-events-none" style="background: radial-gradient(ellipse, rgba(245, 158, 11, 0.3), transparent 70%);"></div>
+
+    <div class="relative z-10 max-w-4xl mx-auto px-6 text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-soft border border-accent/20 mb-8">
+        <span class="text-accent text-xs font-semibold">NEW</span>
+        <span class="text-text-secondary text-xs">Optimized for Brazilian Portuguese</span>
+      </div>
+
+      <h1 class="text-5xl sm:text-6xl md:text-7xl font-display leading-tight mb-6">
+        Your voice,<br />
+        <span class="text-accent italic">perfected.</span>
+      </h1>
+
+      <p class="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
+        Speak naturally in Portuguese, English, or 100+ languages.
+        Voz transcribes, cleans up, and polishes your speech into
+        ready-to-use text — instantly, in any app.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+        <a
+          href="#pricing"
+          class="px-8 py-3.5 bg-accent text-bg-primary font-semibold rounded-xl hover:bg-accent-hover transition-all text-lg shadow-lg"
+          style="box-shadow: 0 4px 24px rgba(245, 158, 11, 0.3);"
+        >
+          Download for Mac
+        </a>
+        <span class="text-text-muted text-sm">Free tier available · macOS 10.15+</span>
+      </div>
+
+      <!-- Floating pill mockup -->
+      <div class="relative mx-auto max-w-md">
+        <div
+          class="inline-flex items-center gap-3 px-6 py-3 rounded-full border"
+          style="background: rgba(41, 37, 36, 0.82); backdrop-filter: blur(20px); border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);"
+        >
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+          </span>
+          <span class="text-sm font-medium text-text-primary">Listening...</span>
+          <div class="flex items-center gap-0.5 h-5">
+            <div class="w-1 bg-accent rounded-full animate-wave-1" style="height: 8px;"></div>
+            <div class="w-1 bg-accent rounded-full animate-wave-2" style="height: 16px;"></div>
+            <div class="w-1 bg-accent rounded-full animate-wave-3" style="height: 12px;"></div>
+            <div class="w-1 bg-accent rounded-full animate-wave-4" style="height: 18px;"></div>
+            <div class="w-1 bg-accent rounded-full animate-wave-5" style="height: 10px;"></div>
+          </div>
+          <span class="text-sm tabular-nums text-text-secondary">0:04</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Speed comparison -->
+  <section class="py-24 border-t border-glass-border">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <h2 class="text-3xl md:text-4xl font-display mb-4">3x faster than typing</h2>
+      <p class="text-text-secondary mb-12 max-w-xl mx-auto">
+        Average typing speed: 40 WPM. Average speaking speed: 130 WPM.
+        Voz bridges the gap with AI-powered cleanup.
+      </p>
+      <div class="grid md:grid-cols-2 gap-6 text-left">
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border">
+          <div class="text-sm text-text-muted mb-3">Typing</div>
+          <div class="h-3 rounded-full bg-bg-elevated overflow-hidden mb-2">
+            <div class="h-full rounded-full bg-text-muted" style="width: 33%;"></div>
+          </div>
+          <div class="text-2xl font-display">40 <span class="text-sm text-text-muted font-body">WPM</span></div>
+        </div>
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-accent/20">
+          <div class="text-sm text-accent mb-3">Speaking with Voz</div>
+          <div class="h-3 rounded-full bg-bg-elevated overflow-hidden mb-2">
+            <div class="h-full rounded-full bg-accent" style="width: 100%;"></div>
+          </div>
+          <div class="text-2xl font-display text-accent">130 <span class="text-sm text-text-muted font-body">WPM</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="py-24 border-t border-glass-border">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display mb-4">Everything you need to dictate</h2>
+        <p class="text-text-secondary max-w-xl mx-auto">
+          Built for professionals who think faster than they type.
+        </p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border hover:border-accent/30 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 text-accent text-lg">&#x2325;</div>
+          <h3 class="text-lg font-display mb-2">Global Hotkey</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">Press Option+Space anywhere to start dictating. Works in every app — email, Slack, code editors, browsers.</p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border hover:border-accent/30 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 text-accent text-lg">&#x2728;</div>
+          <h3 class="text-lg font-display mb-2">AI Cleanup</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">Automatically removes fillers, fixes grammar, and adapts tone based on your active application context.</p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border hover:border-accent/30 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 text-accent text-lg">&#x1F1E7;&#x1F1F7;</div>
+          <h3 class="text-lg font-display mb-2">Portuguese-First</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">World-class Brazilian Portuguese transcription. Knows "ne", "tipo", "entao" are fillers — removes them automatically.</p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border hover:border-accent/30 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 text-accent text-lg">&#x26A1;</div>
+          <h3 class="text-lg font-display mb-2">Blazing Fast</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">Cloud transcription in under 2 seconds. Local mode available for offline use with Apple Silicon acceleration.</p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border hover:border-accent/30 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 text-accent text-lg">&#x1F512;</div>
+          <h3 class="text-lg font-display mb-2">Privacy-First</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">Local mode runs entirely on-device. No audio leaves your Mac. Cloud mode uses encrypted, ephemeral processing.</p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border hover:border-accent/30 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 text-accent text-lg">&#x1F30D;</div>
+          <h3 class="text-lg font-display mb-2">100+ Languages</h3>
+          <p class="text-sm text-text-secondary leading-relaxed">Powered by Whisper large-v3, supporting over 100 languages with auto-detection. Portuguese is priority-tuned.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Portuguese showcase -->
+  <section id="languages" class="py-24 border-t border-glass-border">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-display mb-4">
+          Built for <span class="text-accent italic">Brazilian Portuguese</span>
+        </h2>
+        <p class="text-text-secondary max-w-xl mx-auto">
+          Other tools treat Portuguese as an afterthought. Voz treats it as the priority.
+        </p>
+      </div>
+
+      <div class="p-8 rounded-2xl bg-bg-secondary border border-glass-border">
+        <div class="grid md:grid-cols-2 gap-8">
+          <div>
+            <div class="text-xs uppercase tracking-wider text-text-muted mb-3">You say</div>
+            <p class="text-text-secondary leading-relaxed italic">
+              "Entao tipo assim, ne, eu acho que a gente deveria, ahn, marcar uma reuniao
+              pra discutir isso, sabe, porque ta ficando meio complicado, entendeu?"
+            </p>
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-wider text-accent mb-3">Voz outputs</div>
+            <p class="text-text-primary leading-relaxed">
+              Acho que deveriamos marcar uma reuniao para discutir isso, porque esta ficando complicado.
+            </p>
+          </div>
+        </div>
+        <div class="mt-6 pt-6 border-t border-glass-border flex flex-wrap gap-2">
+          <span class="px-2 py-1 text-xs rounded bg-accent-soft text-accent">Fillers removed</span>
+          <span class="px-2 py-1 text-xs rounded bg-accent-soft text-accent">Grammar fixed</span>
+          <span class="px-2 py-1 text-xs rounded bg-accent-soft text-accent">Concise output</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="py-24 border-t border-glass-border">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-display mb-4">Simple, honest pricing</h2>
+        <p class="text-text-secondary">Start free. Upgrade when you're hooked.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Free -->
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border">
+          <h3 class="text-lg font-display mb-1">Free</h3>
+          <div class="text-3xl font-display mb-4">$0</div>
+          <ul class="space-y-3 text-sm text-text-secondary mb-8">
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>50 transcriptions/month</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>Cloud transcription</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>AI text cleanup</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>All 100+ languages</span>
+            </li>
+          </ul>
+          <a href="#" class="block text-center px-4 py-2.5 rounded-xl border border-glass-border text-text-primary text-sm font-semibold hover:bg-bg-elevated transition-colors">
+            Download Free
+          </a>
+        </div>
+
+        <!-- Pro -->
+        <div class="p-6 rounded-2xl bg-bg-secondary border-2 border-accent relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-accent text-bg-primary text-xs font-semibold rounded-full">
+            Most Popular
+          </div>
+          <h3 class="text-lg font-display mb-1">Pro</h3>
+          <div class="text-3xl font-display mb-1">
+            $8<span class="text-sm text-text-muted font-body">/month</span>
+          </div>
+          <p class="text-xs text-text-muted mb-4">Billed annually ($96/yr)</p>
+          <ul class="space-y-3 text-sm text-text-secondary mb-8">
+            <li class="flex items-start gap-2">
+              <span class="text-accent mt-0.5">&#x2713;</span>
+              <span>Unlimited transcriptions</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-accent mt-0.5">&#x2713;</span>
+              <span>Priority cloud processing</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-accent mt-0.5">&#x2713;</span>
+              <span>Advanced AI cleanup</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-accent mt-0.5">&#x2713;</span>
+              <span>Personal dictionary</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-accent mt-0.5">&#x2713;</span>
+              <span>Deepgram premium accuracy</span>
+            </li>
+          </ul>
+          <a
+            href="#"
+            class="block text-center px-4 py-2.5 rounded-xl bg-accent text-bg-primary text-sm font-semibold hover:bg-accent-hover transition-colors"
+            style="box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);"
+          >
+            Get Pro
+          </a>
+        </div>
+
+        <!-- Lifetime -->
+        <div class="p-6 rounded-2xl bg-bg-secondary border border-glass-border">
+          <h3 class="text-lg font-display mb-1">Lifetime</h3>
+          <div class="text-3xl font-display mb-1">$79</div>
+          <p class="text-xs text-text-muted mb-4">One-time payment</p>
+          <ul class="space-y-3 text-sm text-text-secondary mb-8">
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>Everything in Pro</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>Lifetime updates</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>Local Whisper mode</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-0.5">&#x2713;</span>
+              <span>Priority support</span>
+            </li>
+          </ul>
+          <a href="#" class="block text-center px-4 py-2.5 rounded-xl border border-glass-border text-text-primary text-sm font-semibold hover:bg-bg-elevated transition-colors">
+            Get Lifetime
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-24 border-t border-glass-border">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+      <h2 class="text-3xl md:text-5xl font-display mb-6">
+        Stop typing.<br />Start <span class="text-accent italic">speaking.</span>
+      </h2>
+      <p class="text-text-secondary mb-10 text-lg">
+        Join thousands of professionals who dictate faster than they type.
+      </p>
+      <a
+        href="#"
+        class="inline-block px-8 py-4 bg-accent text-bg-primary font-semibold rounded-xl hover:bg-accent-hover transition-all text-lg"
+        style="box-shadow: 0 4px 24px rgba(245, 158, 11, 0.3);"
+      >
+        Download Voz for Mac
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 border-t border-glass-border">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="text-sm text-text-muted">
+        &copy; 2026 <span class="font-display text-text-secondary">Voz</span>. All rights reserved.
+      </div>
+      <div class="flex items-center gap-6 text-sm text-text-muted">
+        <a href="#" class="hover:text-text-secondary transition-colors">Privacy</a>
+        <a href="#" class="hover:text-text-secondary transition-colors">Terms</a>
+        <a href="#" class="hover:text-text-secondary transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+</Layout>
+
+<style>
+  @keyframes wave-1 {
+    0%, 100% { height: 8px; }
+    50% { height: 16px; }
+  }
+  @keyframes wave-2 {
+    0%, 100% { height: 16px; }
+    50% { height: 6px; }
+  }
+  @keyframes wave-3 {
+    0%, 100% { height: 12px; }
+    50% { height: 20px; }
+  }
+  @keyframes wave-4 {
+    0%, 100% { height: 18px; }
+    50% { height: 8px; }
+  }
+  @keyframes wave-5 {
+    0%, 100% { height: 10px; }
+    50% { height: 14px; }
+  }
+
+  .animate-wave-1 { animation: wave-1 1.2s ease-in-out infinite; }
+  .animate-wave-2 { animation: wave-2 1.0s ease-in-out infinite; }
+  .animate-wave-3 { animation: wave-3 1.4s ease-in-out infinite; }
+  .animate-wave-4 { animation: wave-4 0.9s ease-in-out infinite; }
+  .animate-wave-5 { animation: wave-5 1.3s ease-in-out infinite; }
+</style>
