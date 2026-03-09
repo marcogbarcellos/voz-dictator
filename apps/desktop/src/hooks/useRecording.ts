@@ -49,12 +49,16 @@ export function useRecording(settings: AppSettings): RecordingState {
 
       let finalText = result;
       if (settings.aiCleanup) {
-        const activeApp = await commands.getActiveApp().catch(() => "unknown");
-        finalText = await commands.cleanupText(
-          result,
-          settings.language,
-          activeApp
-        );
+        try {
+          const activeApp = await commands.getActiveApp().catch(() => "unknown");
+          finalText = await commands.cleanupText(
+            result,
+            settings.language,
+            activeApp
+          );
+        } catch (cleanupErr) {
+          console.warn("AI cleanup failed, using raw transcript:", cleanupErr);
+        }
       }
       setTranscript(finalText);
       const injectResult = await commands.smartInjectText(finalText);

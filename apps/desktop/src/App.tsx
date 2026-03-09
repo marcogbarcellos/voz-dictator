@@ -25,10 +25,10 @@ export default function App() {
     }
   }, [isLoaded, settings.onboardingComplete]);
 
-  // Listen for tray "open-settings" event — show + focus window
+  // Listen for tray "Open Dashboard" event
   useEffect(() => {
-    const unlisten = listen("open-settings", () => {
-      setView("settings");
+    const unlisten = listen("open-dashboard", () => {
+      setView("home");
       const win = getCurrentWindow();
       win.show();
       win.setFocus();

@@ -9,8 +9,7 @@ mod usage;
 
 use audio::capture::AudioRecorder;
 use std::sync::Arc;
-use tauri::Manager;
-use tauri::tray::TrayIcon;
+use tauri::Manager as _;
 use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::Mutex;
 
@@ -19,7 +18,7 @@ pub struct AppState {
     /// Lock-free audio level — read without locking the recorder
     pub audio_level: Arc<std::sync::atomic::AtomicU32>,
     pub settings: Arc<Mutex<settings::VozSettings>>,
-    pub tray: Arc<std::sync::Mutex<Option<TrayIcon>>>,
+    pub app_handle: std::sync::OnceLock<tauri::AppHandle>,
     pub usage: Arc<Mutex<usage::UsageStore>>,
 }
 
@@ -28,11 +27,11 @@ async fn start_recording(
     state: tauri::State<'_, AppState>,
     language: String,
 ) -> Result<(), String> {
+    // Update tray BEFORE starting recording
+    update_tray(&state, "listening");
+
     let mut recorder = state.recorder.lock().await;
     recorder.start(&language).map_err(|e| e.to_string())?;
-
-    // Update tray icon to recording state
-    update_tray(&state, "listening");
     Ok(())
 }
 
@@ -340,50 +339,46 @@ async fn get_auto_start(app: tauri::AppHandle) -> Result<bool, String> {
     autostart.is_enabled().map_err(|e| e.to_string())
 }
 
-/// Update tray icon/title based on recording state (called from Rust, no IPC overhead)
+/// Update tray icon/title based on recording state.
+/// Dispatches to the main thread — macOS requires UI updates on main thread.
 fn update_tray(state: &AppState, recording_state: &str) {
     log::info!("[tray] update_tray called with state='{}'", recording_state);
-    match state.tray.lock() {
-        Ok(tray_guard) => {
-            if let Some(tray) = tray_guard.as_ref() {
-                let (title, tooltip) = match recording_state {
-                    "listening" => ("REC", "Voz — Recording..."),
-                    "processing" => ("...", "Voz — Transcribing..."),
-                    _ => ("", "Voz — Voice Dictation"),
-                };
-                let icon = match recording_state {
-                    "listening" => tauri::image::Image::from_bytes(
-                        include_bytes!("../icons/tray-recording.png"),
-                    )
-                    .expect("failed to load recording icon"),
-                    "processing" => tauri::image::Image::from_bytes(
-                        include_bytes!("../icons/tray-processing.png"),
-                    )
-                    .expect("failed to load processing icon"),
-                    _ => tauri::image::Image::from_bytes(
-                        include_bytes!("../icons/tray-idle.png"),
-                    )
-                    .expect("failed to load idle icon"),
-                };
-                if let Err(e) = tray.set_icon(Some(icon)) {
-                    log::error!("[tray] set_icon failed: {}", e);
-                }
-                // Idle = template (macOS auto-tints for light/dark); recording/processing = colored
-                let _ = tray.set_icon_as_template(recording_state != "listening" && recording_state != "processing");
-                if let Err(e) = tray.set_title(Some(title)) {
-                    log::error!("[tray] set_title failed: {}", e);
-                }
-                if let Err(e) = tray.set_tooltip(Some(tooltip)) {
-                    log::error!("[tray] set_tooltip failed: {}", e);
-                }
-                log::info!("[tray] Successfully updated tray to '{}'", recording_state);
-            } else {
-                log::warn!("[tray] Tray handle is None!");
-            }
+
+    let Some(app) = state.app_handle.get() else {
+        log::warn!("[tray] AppHandle not yet set");
+        return;
+    };
+
+    let app = app.clone();
+    let recording_state = recording_state.to_string();
+
+    // Dispatch to main thread — NSStatusItem updates must happen there
+    let app_inner = app.clone();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let Some(tray) = app_inner.tray_by_id("voz-tray") else {
+            log::warn!("[tray] Tray 'voz-tray' not found on main thread");
+            return;
+        };
+
+        let (title, tooltip) = match recording_state.as_str() {
+            "listening" => ("REC", "Voz — Recording..."),
+            "processing" => ("...", "Voz — Transcribing..."),
+            _ => ("", "Voz — Voice Dictation"),
+        };
+
+        let icon_bytes: &[u8] = match recording_state.as_str() {
+            "listening" => include_bytes!("../icons/tray-recording.png"),
+            "processing" => include_bytes!("../icons/tray-processing.png"),
+            _ => include_bytes!("../icons/tray-idle.png"),
+        };
+        if let Ok(icon) = tauri::image::Image::from_bytes(icon_bytes) {
+            let _ = tray.set_icon(Some(icon));
         }
-        Err(e) => {
-            log::error!("[tray] Failed to lock tray mutex: {}", e);
-        }
+        let _ = tray.set_title(Some(title));
+        let _ = tray.set_tooltip(Some(tooltip));
+        log::info!("[tray] Main thread: updated to '{}' (title='{}')", recording_state, title);
+    }) {
+        log::error!("[tray] Failed to dispatch to main thread: {}", e);
     }
 }
 
@@ -409,6 +404,7 @@ async fn smart_inject_text(app: tauri::AppHandle, text: String) -> Result<String
     }
 
     let has_field = injection::accessibility::has_focused_text_input();
+    log::info!("[inject] has_focused_text_input={}", has_field);
     if has_field {
         injection::paste::inject(&text).map_err(|e| e.to_string())?;
         Ok("pasted".to_string())
@@ -426,11 +422,8 @@ pub fn run() {
     let loaded_settings = settings::VozSettings::load();
     let onboarding_complete = loaded_settings.onboarding_complete;
     let settings = Arc::new(Mutex::new(loaded_settings));
-    let tray_handle: Arc<std::sync::Mutex<Option<TrayIcon>>> =
-        Arc::new(std::sync::Mutex::new(None));
-
     let usage = Arc::new(Mutex::new(usage::UsageStore::load()));
-    let tray_for_setup = tray_handle.clone();
+    let app_handle_cell = std::sync::OnceLock::new();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -441,10 +434,14 @@ pub fn run() {
             recorder,
             audio_level,
             settings,
-            tray: tray_handle,
+            app_handle: app_handle_cell,
             usage,
         })
         .setup(move |app| {
+            // Store app handle for tray updates
+            let state = app.state::<AppState>();
+            let _ = state.app_handle.set(app.handle().clone());
+
             // Set dock icon (tauri dev doesn't use the .app bundle icon)
             #[cfg(target_os = "macos")]
             {
@@ -463,11 +460,8 @@ pub fn run() {
                 }
             }
 
-            // Set up tray — store handle
-            let tray_icon = tray::setup_tray(app)?;
-            if let Ok(mut guard) = tray_for_setup.lock() {
-                *guard = Some(tray_icon);
-            }
+            // Set up tray
+            let _tray_icon = tray::setup_tray(app)?;
 
             // Set up global hotkey
             hotkey::setup_hotkey(app)?;
@@ -519,6 +513,16 @@ pub fn run() {
             // Show window when user clicks the Dock icon
             if let tauri::RunEvent::Reopen { .. } = event {
                 if let Some(win) = app.get_webview_window("main") {
+                    #[cfg(target_os = "macos")]
+                    {
+                        use cocoa::base::id;
+                        use objc::{class, msg_send, sel, sel_impl};
+                        unsafe {
+                            let ns_app: id =
+                                msg_send![class!(NSApplication), sharedApplication];
+                            let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
+                        }
+                    }
                     let _ = win.show();
                     let _ = win.set_focus();
                 }

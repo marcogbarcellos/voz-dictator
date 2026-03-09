@@ -1,7 +1,7 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager,
+    Emitter, Manager,
 };
 
 pub fn setup_tray(
@@ -12,19 +12,32 @@ pub fn setup_tray(
 
     let menu = Menu::with_items(app, &[&open_item, &quit_item])?;
 
-    let tray = TrayIconBuilder::new()
+    let tray = TrayIconBuilder::with_id("voz-tray")
         .icon(
             tauri::image::Image::from_bytes(include_bytes!("../icons/tray-idle.png"))
                 .expect("failed to load tray icon"),
         )
-        .icon_as_template(true)
+        .icon_as_template(false)
         .tooltip("Voz — Voice Dictation")
         .menu(&menu)
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "open" => {
                 if let Some(win) = app.get_webview_window("main") {
+                    // Activate the app on macOS so it comes to the foreground
+                    #[cfg(target_os = "macos")]
+                    {
+                        use cocoa::base::id;
+                        use objc::{class, msg_send, sel, sel_impl};
+                        unsafe {
+                            let ns_app: id =
+                                msg_send![class!(NSApplication), sharedApplication];
+                            let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
+                        }
+                    }
                     let _ = win.show();
                     let _ = win.set_focus();
+                    // Notify frontend to switch to dashboard view
+                    let _ = app.emit("open-dashboard", ());
                 }
             }
             "quit" => {
