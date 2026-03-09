@@ -357,4 +357,4 @@ Hotkey pressed (Alt+Space)
 
 ## License
 
-Proprietary. All rights reserved.
+[MIT](LICENSE)
