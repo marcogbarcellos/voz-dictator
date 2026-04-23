@@ -301,14 +301,15 @@ export function Onboarding({ onComplete, onUpdate }: OnboardingProps) {
                 API Keys
               </h2>
               <p className="text-text-secondary text-sm leading-relaxed">
-                Voz uses Groq for fast transcription and Claude for text cleanup.
-                You can change these later in Settings.
+                Voz works fully offline by default using a local Whisper model.
+                Keys are optional — add them only if you want faster cloud
+                transcription (Groq) or AI text cleanup (Claude).
               </p>
               <div className="space-y-4 text-left">
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5">
                     Groq API Key
-                    <span className="text-accent ml-1">(required)</span>
+                    <span className="text-text-muted ml-1">(optional, for cloud STT)</span>
                   </label>
                   <input
                     type="password"
@@ -345,8 +346,7 @@ export function Onboarding({ onComplete, onUpdate }: OnboardingProps) {
               </div>
               <button
                 onClick={next}
-                disabled={!groqKey.trim()}
-                className={`btn-primary ${!groqKey.trim() ? "opacity-40 cursor-not-allowed" : ""}`}
+                className="btn-primary"
               >
                 Continue
               </button>
@@ -401,13 +401,11 @@ export function Onboarding({ onComplete, onUpdate }: OnboardingProps) {
               </label>
 
               <button
-                onClick={async () => {
+                onClick={() => {
                   if (autoStartEnabled) {
-                    try {
-                      await setAutoStart(true);
-                    } catch {
-                      // ignore — don't block onboarding
-                    }
+                    // Fire-and-forget — the autostart plugin can stall on
+                    // first-run on macOS; never block the onboarding exit.
+                    setAutoStart(true).catch(() => {});
                   }
                   onComplete();
                 }}

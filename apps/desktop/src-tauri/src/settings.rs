@@ -28,8 +28,8 @@ impl Default for VozSettings {
     fn default() -> Self {
         Self {
             language: "pt".to_string(),
-            stt_mode: "cloud".to_string(),
-            stt_provider: "groq".to_string(),
+            stt_mode: "local".to_string(),
+            stt_provider: "local".to_string(),
             ai_cleanup: true,
             remove_fillers: true,
             fix_grammar: true,

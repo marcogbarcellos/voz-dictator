@@ -8,10 +8,26 @@ mod tray;
 mod usage;
 
 use audio::capture::AudioRecorder;
+use std::path::PathBuf;
 use std::sync::Arc;
+use tauri::path::BaseDirectory;
 use tauri::Manager as _;
 use tauri_plugin_autostart::MacosLauncher;
 use tokio::sync::Mutex;
+
+/// Resolve the Whisper model path: explicit setting wins, otherwise the
+/// GGML file bundled under the app's resource dir.
+fn resolve_local_model_path(
+    app: &tauri::AppHandle,
+    override_path: &str,
+) -> Result<PathBuf, String> {
+    if !override_path.is_empty() {
+        return Ok(PathBuf::from(override_path));
+    }
+    app.path()
+        .resolve(stt::local::BUNDLED_MODEL_FILENAME, BaseDirectory::Resource)
+        .map_err(|e| format!("failed to resolve bundled Whisper model: {}", e))
+}
 
 pub struct AppState {
     pub recorder: Arc<Mutex<AudioRecorder>>,
@@ -80,8 +96,23 @@ async fn stop_recording(state: tauri::State<'_, AppState>) -> Result<String, Str
                 .await
                 .map_err(|e| e.to_string())?
         }
+        "local" => {
+            let app = state
+                .app_handle
+                .get()
+                .ok_or_else(|| "app handle not initialized".to_string())?;
+            let model_path = resolve_local_model_path(app, &settings.local_model_path)?;
+            stt::local::transcribe(&audio_data, &stt_language, &model_path)
+                .await
+                .map_err(|e| e.to_string())?
+        }
         _ => {
-            stt::groq::transcribe(&audio_data, &stt_language, &settings.groq_api_key)
+            let app = state
+                .app_handle
+                .get()
+                .ok_or_else(|| "app handle not initialized".to_string())?;
+            let model_path = resolve_local_model_path(app, &settings.local_model_path)?;
+            stt::local::transcribe(&audio_data, &stt_language, &model_path)
                 .await
                 .map_err(|e| e.to_string())?
         }
@@ -117,6 +148,16 @@ async fn transcribe_audio(
     let audio_data = std::fs::read(&audio_path).map_err(|e| e.to_string())?;
 
     match provider.as_str() {
+        "local" => {
+            let app = state
+                .app_handle
+                .get()
+                .ok_or_else(|| "app handle not initialized".to_string())?;
+            let model_path = resolve_local_model_path(app, &settings.local_model_path)?;
+            stt::local::transcribe(&audio_data, &language, &model_path)
+                .await
+                .map_err(|e| e.to_string())
+        }
         "groq" => stt::groq::transcribe(&audio_data, &language, &settings.groq_api_key)
             .await
             .map_err(|e| e.to_string()),
@@ -143,6 +184,13 @@ async fn cleanup_text(
 ) -> Result<String, String> {
     let settings = state.settings.lock().await;
     let api_key = settings.anthropic_api_key.clone();
+
+    // No Anthropic key → skip cleanup entirely and return the raw transcript.
+    // Local-first users have no reason to provide one.
+    if api_key.is_empty() {
+        log::info!("[cleanup] anthropic_api_key empty, skipping LLM cleanup");
+        return Ok(text);
+    }
 
     // Determine configured languages
     let languages = if settings.personal_languages.is_empty() {
