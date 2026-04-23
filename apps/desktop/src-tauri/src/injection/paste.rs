@@ -35,6 +35,8 @@ pub fn inject(text: &str) -> Result<(), anyhow::Error> {
 }
 
 fn get_clipboard() -> Option<String> {
+    // See set_clipboard for why LANG/LC_CTYPE are forced to UTF-8 —
+    // same Mac Roman fallback issue applies to pbpaste in reverse.
     Command::new("pbpaste")
         .env("LANG", "en_US.UTF-8")
         .env("LC_CTYPE", "en_US.UTF-8")

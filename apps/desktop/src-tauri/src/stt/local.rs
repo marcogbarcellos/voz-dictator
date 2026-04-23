@@ -78,10 +78,11 @@ fn run_whisper(model_path: &Path, language: &str, pcm: &[f32]) -> Result<String>
     params.set_suppress_blank(true);
     params.set_translate(false);
 
+    // whisper.cpp's language lookup expects 2-letter codes; normalize
+    // BCP-47-style locales (en-US, es-419, pt-BR) to the primary subtag.
     let lang_opt: Option<&str> = match language {
         "" | "auto" => None,
-        "pt" | "pt-BR" => Some("pt"),
-        other => Some(other),
+        other => Some(other.split('-').next().unwrap_or(other)),
     };
     if let Some(l) = lang_opt {
         params.set_language(Some(l));
