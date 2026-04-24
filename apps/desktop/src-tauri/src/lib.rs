@@ -557,19 +557,18 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| {
-            // Show window when user clicks the Dock icon
-            if let tauri::RunEvent::Reopen { .. } = event {
-                if let Some(win) = app.get_webview_window("main") {
-                    #[cfg(target_os = "macos")]
-                    {
-                        use cocoa::base::id;
-                        use objc::{class, msg_send, sel, sel_impl};
-                        unsafe {
-                            let ns_app: id =
-                                msg_send![class!(NSApplication), sharedApplication];
-                            let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
-                        }
+        .run(|_app, _event| {
+            // Dock-icon reopen is macOS-specific — the Reopen variant only
+            // exists on the RunEvent enum for macOS builds.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                if let Some(win) = _app.get_webview_window("main") {
+                    use cocoa::base::id;
+                    use objc::{class, msg_send, sel, sel_impl};
+                    unsafe {
+                        let ns_app: id =
+                            msg_send![class!(NSApplication), sharedApplication];
+                        let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
                     }
                     let _ = win.show();
                     let _ = win.set_focus();
