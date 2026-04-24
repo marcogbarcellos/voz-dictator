@@ -1,6 +1,6 @@
 [package]
 name = "voz"
-version = "0.1.0"
+version = "0.1.1"
 description = "Brazilian-first voice dictation for Mac"
 authors = ["Voz"]
 edition = "2021"
