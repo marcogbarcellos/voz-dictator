@@ -17,9 +17,9 @@ Voz is a commercial competitor to [Wispr Flow](https://wisprflow.ai), built with
 │  │  (Webview)   │◄──►│                       │ │
 │  │              │    │  ├─ Audio Capture      │ │
 │  │  - Float pill│    │  ├─ VAD               │ │
-│  │  - Settings  │    │  ├─ Cloud STT (Groq)  │ │
-│  │  - Tray menu │    │  ├─ Cloud STT (DG)    │ │
-│  │  - Onboarding│    │  ├─ LLM Cleanup       │ │
+│  │  - Settings  │    │  ├─ Local STT (Whisper)│ │
+│  │  - Tray menu │    │  ├─ Cloud STT (Groq/DG)│ │
+│  │  - Onboarding│    │  ├─ LLM Cleanup        │ │
 │  └─────────────┘    │  ├─ Text Injection     │ │
 │                      │  └─ Global Hotkey      │ │
 │                      └──────────────────────┘ │
@@ -31,9 +31,9 @@ Voz is a commercial competitor to [Wispr Flow](https://wisprflow.ai), built with
 1. Press **Option+Space** anywhere on your Mac
 2. Speak naturally — Voz captures audio via `cpal` and shows a floating pill indicator
 3. Release the hotkey — audio is resampled to 16kHz mono WAV
-4. The WAV is sent to **Groq Whisper large-v3** (or Deepgram Nova-3) for transcription
-5. Raw transcription goes through **Claude Haiku 4.5** for cleanup (grammar, fillers, tone)
-6. Cleaned text is injected into the active app via clipboard paste simulation
+4. The WAV is transcribed either **locally** (bundled Whisper large-v3-turbo, default — no API key required) or via **cloud** (Groq Whisper or Deepgram Nova-3)
+5. If an Anthropic key is configured, raw transcription goes through **Claude Haiku 4.5** for cleanup (grammar, fillers, tone) — otherwise raw transcript is used
+6. Final text is injected into the active app via clipboard paste simulation
 
 ---
 
@@ -90,8 +90,10 @@ voz/
 │   │   │   │   │   ├── vad.rs             # Voice Activity Detection
 │   │   │   │   │   └── resample.rs        # 16kHz resampling via rubato
 │   │   │   │   ├── stt/
+│   │   │   │   │   ├── local.rs           # Bundled Whisper (whisper-rs, Metal)
 │   │   │   │   │   ├── groq.rs            # Groq Whisper API client
-│   │   │   │   │   └── deepgram.rs        # Deepgram Nova-3 client
+│   │   │   │   │   ├── deepgram.rs        # Deepgram Nova-3 client
+│   │   │   │   │   └── assemblyai.rs      # AssemblyAI client
 │   │   │   │   ├── cleanup/
 │   │   │   │   │   ├── llm.rs             # Claude Haiku API client
 │   │   │   │   │   └── prompts.rs         # Context-aware system prompts
@@ -124,13 +126,39 @@ voz/
 
 ---
 
-## Prerequisites
+## Install (end users)
 
-- **macOS** 10.15+ (Catalina or later)
+> Release binaries are published on the [Releases page](https://github.com/marcogbarcellos/voz-dictator/releases/latest). Builds are currently **unsigned** — expect a one-time OS warning on first launch.
+
+### macOS
+
+1. Download the `.dmg` matching your chip (`Voz_<version>_aarch64.dmg` for Apple Silicon, `Voz_<version>_x64.dmg` for Intel)
+2. Open the DMG, drag **Voz** to Applications
+3. First launch: right-click the app → **Open** → **Open** again on the "unidentified developer" dialog. One time only. (Double-clicking shows a "cannot be opened" message because the app isn't notarized — the right-click path bypasses this.)
+4. Grant **Microphone** and **Accessibility** permissions when prompted
+
+### Windows
+
+1. Download `Voz_<version>_x64-setup.msi`
+2. Run the installer — on the "Windows protected your PC" screen, click **More info** → **Run anyway** (SmartScreen warning, same unsigned-binary reason as above)
+3. Launch Voz from the Start menu
+
+> **Note on Windows builds:** macOS-specific paths (global hotkey, text injection via Cmd+V, tray behavior) currently have only minimal Windows stubs. The Windows build is experimental.
+
+---
+
+## Prerequisites (for building from source)
+
+- **macOS** 10.15+ (Catalina or later) or Windows 10+
 - **Node.js** >= 20
 - **pnpm** >= 9
 - **Rust** (stable, latest) — install via [rustup.rs](https://rustup.rs)
-- **Tauri CLI** v2
+- **CMake** — required by `whisper-rs-sys` to compile the embedded whisper.cpp
+  - macOS: `brew install cmake`
+  - Windows: bundled with recent Visual Studio Build Tools, or install from [cmake.org](https://cmake.org)
+- **Xcode Command Line Tools** (macOS only): `xcode-select --install`
+
+> **First build caveat:** the build script downloads `ggml-large-v3-turbo-q8_0.bin` (~874 MB, SHA256-verified) from Hugging Face into `apps/desktop/src-tauri/resources/`, then compiles whisper.cpp from source (~5 minutes on Apple Silicon). Subsequent builds reuse the cached model and compiled artifacts.
 
 ---
 
@@ -150,7 +178,7 @@ pnpm install
 cargo install tauri-cli --version "^2"
 ```
 
-### 3. Build Rust dependencies (first time takes a few minutes)
+### 3. Build Rust dependencies (first time: ~5–10 min, ~874 MB download)
 
 ```bash
 cd apps/desktop/src-tauri
@@ -158,26 +186,31 @@ cargo build
 cd ../../..
 ```
 
-### 4. Configure API keys
+First build triggers the Whisper model download (verified against a pinned SHA256) and compiles whisper.cpp. Repeat builds are fast.
 
-API keys are entered through the **Settings UI** inside the app (accessible from the tray icon or during onboarding). They are persisted to a local JSON file.
+### 4. Configure API keys (optional)
 
-Alternatively, you can create the settings file manually before first launch:
+By default Voz runs fully offline with the bundled Whisper model — **no API keys required**. Keys only matter if you want:
+
+- Faster cloud transcription (Groq or Deepgram), or
+- AI cleanup of raw transcripts (Claude)
+
+Keys are entered through the **Settings UI** inside the app (tray icon → Settings) and persisted to a local JSON file. Alternatively you can hand-edit the settings file before first launch:
 
 ```bash
-mkdir -p ~/.config/voz
-cat > ~/.config/voz/settings.json << 'EOF'
+mkdir -p ~/Library/Application\ Support/voz
+cat > ~/Library/Application\ Support/voz/settings.json << 'EOF'
 {
   "language": "pt",
-  "stt_mode": "cloud",
-  "stt_provider": "groq",
+  "stt_mode": "local",
+  "stt_provider": "local",
   "ai_cleanup": true,
   "remove_fillers": true,
   "fix_grammar": true,
   "adapt_tone": false,
-  "groq_api_key": "YOUR_GROQ_API_KEY",
+  "groq_api_key": "",
   "deepgram_api_key": "",
-  "anthropic_api_key": "YOUR_ANTHROPIC_API_KEY",
+  "anthropic_api_key": "",
   "local_model_path": "",
   "hotkey": "Alt+Space",
   "personal_dictionary": []
@@ -217,22 +250,15 @@ pnpm build
 
 ---
 
-## API Keys
+## API Keys (all optional)
 
-You need **2 required** API keys and **1 optional** key:
+Voz works offline out of the box. API keys only enable faster cloud transcription and AI cleanup:
 
-### Required
-
-| Key | Where to get it | Used for | Pricing |
-|-----|----------------|----------|---------|
-| **Groq API Key** | [console.groq.com](https://console.groq.com) | Speech-to-text via Whisper large-v3 | Free tier available, ~$0.11/hr after |
-| **Anthropic API Key** | [console.anthropic.com](https://console.anthropic.com) | AI text cleanup via Claude Haiku 4.5 | $0.80/1M input tokens, $4/1M output |
-
-### Optional
-
-| Key | Where to get it | Used for | Pricing |
-|-----|----------------|----------|---------|
+| Key | Where to get it | Enables | Pricing |
+|-----|----------------|---------|---------|
+| **Groq API Key** | [console.groq.com](https://console.groq.com) | Cloud transcription via Whisper large-v3 (faster than local on old hardware) | Free tier available, ~$0.11/hr after |
 | **Deepgram API Key** | [console.deepgram.com](https://console.deepgram.com) | Premium pt-BR accuracy via Nova-3 | $200 free credit, ~$0.26/hr after |
+| **Anthropic API Key** | [console.anthropic.com](https://console.anthropic.com) | AI text cleanup via Claude Haiku 4.5 (grammar, fillers, tone) | $0.80/1M input tokens, $4/1M output |
 
 ### Where to enter them
 
@@ -245,14 +271,14 @@ You need **2 required** API keys and **1 optional** key:
 
 **Option B — Settings file:**
 
-Edit `~/.config/voz/settings.json` directly (see step 4 above).
+Edit `~/Library/Application Support/voz/settings.json` directly (see step 4 above).
 
 ### Notes
 
-- If no **Anthropic key** is set, AI cleanup is skipped — you get raw transcription output
-- If no **Groq key** is set, cloud transcription won't work (you'll see an error in the pill)
-- **Deepgram** is only used if you switch the STT provider to `deepgram` in settings — it's not the default
-- Keys are stored in plaintext in `~/.config/voz/settings.json`. Treat this file as sensitive
+- **Default (no keys)**: local Whisper transcription, no cleanup — raw transcript as written
+- **Adding an Anthropic key**: enables AI cleanup on top of whichever STT is configured
+- **Adding a Groq/Deepgram key**: offers a cloud alternative; switch in Settings if you want to use it
+- Keys are stored in plaintext in `~/Library/Application Support/voz/settings.json`. Treat this file as sensitive
 
 ---
 
@@ -350,8 +376,8 @@ Hotkey pressed (Alt+Space)
 - **Frontend hot reload**: The Vite dev server runs at `localhost:1420`. Tauri's webview connects to it in dev mode, so React changes are reflected instantly.
 - **Rust changes**: Require recompilation. `cargo tauri dev` will rebuild automatically but it takes a few seconds.
 - **Logs**: Run with `RUST_LOG=debug cargo tauri dev` to see detailed backend logs.
-- **Settings location**: `~/.config/voz/settings.json` — delete this file to reset to defaults.
-- **Dictionary location**: `~/.config/voz/dictionary.json`
+- **Settings location**: `~/Library/Application Support/voz/settings.json` — delete this file to reset to defaults.
+- **Dictionary location**: `~/Library/Application Support/voz/dictionary.json`
 
 ---
 
