@@ -1,0 +1,105 @@
+name: Release
+
+# Builds Voz for macOS (Apple Silicon + Intel) and Windows when a version tag
+# is pushed, then creates a draft GitHub Release with the artifacts attached.
+# Publish the draft manually after sanity-checking the DMGs/MSI.
+#
+# To cut a release:
+#   1. Bump the version in three places (keep them in sync):
+#        - apps/desktop/package.json
+#        - apps/desktop/src-tauri/Cargo.toml
+#        - apps/desktop/src-tauri/tauri.conf.json
+#   2. Commit + tag + push:
+#        git commit -am "chore: release v0.1.1"
+#        git tag v0.1.1
+#        git push && git push --tags
+#   3. Wait ~15 min on first run (subsequent runs hit caches and take ~5-7 min)
+#   4. Review the draft release on GitHub, publish when happy
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    permissions:
+      contents: write # required so GITHUB_TOKEN can create the release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-14       # Apple Silicon (native aarch64)
+          - platform: macos-13       # Intel (native x86_64)
+          - platform: windows-latest # x86_64
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.3.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      # Caches ~/.cargo and apps/desktop/src-tauri/target. Invalidates on
+      # Cargo.lock changes. The first run per platform takes ~15 min because
+      # whisper.cpp compiles from source; cached runs are closer to 5-7 min.
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      # The Whisper GGML model (~874 MB) is downloaded by build.rs on first
+      # build. We cache it so subsequent runs skip the download. Cache key
+      # follows build.rs, which pins the SHA256 — update one, update both.
+      - name: Cache Whisper GGML model
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/src-tauri/resources/ggml-large-v3-turbo-q8_0.bin
+          key: whisper-model-${{ hashFiles('apps/desktop/src-tauri/build.rs') }}
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: Voz ${{ github.ref_name }}
+          releaseBody: |
+            ## Download
+
+            Pick the build that matches your machine:
+
+            - **macOS (Apple Silicon, M1/M2/M3/M4)**: `Voz_*_aarch64.dmg`
+            - **macOS (Intel)**: `Voz_*_x64.dmg`
+            - **Windows**: `Voz_*_x64-setup.msi`
+
+            ### First-launch notes
+
+            Builds are currently **unsigned** to keep Voz free, so you'll see
+            a one-time OS warning:
+
+            - **macOS**: right-click the app → **Open** → **Open** again on
+              the "unidentified developer" dialog. One time only.
+            - **Windows**: on the "Windows protected your PC" screen, click
+              **More info** → **Run anyway**.
+
+            See the [README](https://github.com/marcogbarcellos/voz-dictator#install-end-users)
+            for full install steps and troubleshooting.
+          releaseDraft: true
+          prerelease: false
