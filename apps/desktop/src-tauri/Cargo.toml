@@ -31,12 +31,15 @@ dirs = "6"
 log = "0.4"
 env_logger = "0.11"
 anyhow = "1"
-whisper-rs = { version = "0.14", features = ["metal"] }
+whisper-rs = "0.14"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.26"
 objc = "0.2"
 block = "0.1"
+# Metal GPU acceleration for whisper.cpp — macOS only; the feature pulls in
+# Foundation/Metal frameworks and fails CMake configure on Windows/Linux.
+whisper-rs = { version = "0.14", features = ["metal"] }
 
 [features]
 default = ["custom-protocol"]
