@@ -187,11 +187,16 @@ export function SettingsPanel({ settings, onUpdate, onClose }: SettingsPanelProp
         <Section title="Transcription Mode">
           <ModeToggle
             value={settings.sttMode}
-            onChange={(sttMode) => onUpdate({ sttMode })}
+            onChange={(sttMode) =>
+              onUpdate({
+                sttMode,
+                sttProvider: sttMode === "local" ? "local" : "groq",
+              })
+            }
           />
           {settings.sttMode === "local" && (
             <p className="text-xs text-text-muted mt-1">
-              Uses on-device Whisper. Requires model download (~3GB).
+              Runs Whisper large-v3-turbo on-device. No API key needed.
             </p>
           )}
         </Section>

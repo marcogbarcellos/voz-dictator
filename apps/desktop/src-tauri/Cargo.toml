@@ -30,6 +30,7 @@ dirs = "6"
 log = "0.4"
 env_logger = "0.11"
 anyhow = "1"
+whisper-rs = { version = "0.14", features = ["metal"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.26"

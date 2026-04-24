@@ -39,6 +39,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "resources/ggml-large-v3-turbo-q8_0.bin": "ggml-large-v3-turbo-q8_0.bin"
+    },
     "macOS": {
       "entitlements": null,
       "minimumSystemVersion": "10.15"

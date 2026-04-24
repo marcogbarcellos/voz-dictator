@@ -36,6 +36,8 @@ pub fn inject(text: &str) -> Result<(), anyhow::Error> {
 
 fn get_clipboard() -> Option<String> {
     Command::new("pbpaste")
+        .env("LANG", "en_US.UTF-8")
+        .env("LC_CTYPE", "en_US.UTF-8")
         .output()
         .ok()
         .and_then(|output| {
@@ -54,7 +56,13 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), anyhow::Error> {
 
 fn set_clipboard(text: &str) -> Result<(), anyhow::Error> {
     use std::io::Write;
+    // Force UTF-8: when launched from Finder, the .app inherits no LANG,
+    // and pbcopy then falls back to the system legacy encoding (Mac Roman
+    // on many setups), mangling accented characters on the way to the
+    // pasteboard.
     let mut child = Command::new("pbcopy")
+        .env("LANG", "en_US.UTF-8")
+        .env("LC_CTYPE", "en_US.UTF-8")
         .stdin(std::process::Stdio::piped())
         .spawn()?;
 

@@ -9,3 +9,5 @@ target/
 .idea/
 .vscode/
 *.swp
+apps/desktop/src-tauri/resources/*.bin
+apps/desktop/src-tauri/resources/*.part
